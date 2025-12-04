@@ -1,5 +1,5 @@
 // App.js
-import React from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createDrawerNavigator, DrawerContentScrollView } from '@react-navigation/drawer';
@@ -10,6 +10,17 @@ import HomeScreen from './screens/HomeScreen';
 import UserScreen from './screens/UserScreen';
 import CalendarScreen from './screens/CalendarScreen';
 import FeedScreen from './screens/FeedScreen';
+import HolidayScreen from './screens/HolidayScreen';
+import PostOfficeScreen from './screens/PostOfficeScreen';
+import FeeScreen from './screens/FeeScreen';
+import AssessmentScreen from './screens/AssessmentScreen';
+import AttendanceScreen from './screens/AttendanceScreen';
+import TimetableScreen from './screens/TimetableScreen';
+import MailsScreen from './screens/MailsScreen';
+import RulesScreen from './screens/RulesScreen';
+import LoginScreen from './screens/LoginScreen';
+import ChangePasswordScreen from './screens/ChangePasswordScreen';
+import NotificationsScreen from './screens/NotificationsScreen';
 import Feather from 'react-native-vector-icons/Feather';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -20,7 +31,30 @@ const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
 // -------- Custom Drawer ----------
+import { UserProvider, UserContext } from './contexts/UserContext';
+
+
+// ... (imports remain same)
+
+import { NotificationContext } from './contexts/NotificationContext';
+import { Alert } from 'react-native';
+
+// -------- Custom Drawer ----------
 function CustomDrawerContent(props) {
+  const { user, logout } = useContext(UserContext);
+  const { fetchUnreadCount } = useContext(NotificationContext);
+
+  const handleRefresh = async () => {
+    try {
+      await fetchUnreadCount();
+      // You can add other refresh calls here (e.g., fetchUser, fetchFeeds if they were in context)
+      Alert.alert("Refreshed", "Data has been updated.");
+      props.navigation.closeDrawer();
+    } catch (error) {
+      console.log("Refresh failed", error);
+    }
+  };
+
   return (
     <DrawerContentScrollView {...props} contentContainerStyle={{ flex: 1 }}>
       {/* Header with Logo + School Name */}
@@ -38,21 +72,21 @@ function CustomDrawerContent(props) {
 
       {/* Menu Items */}
       <View style={styles.menuSection}>
-        <DrawerItem icon="file-text" label="Holiday/Event" />
-        <DrawerItem icon="mail" label="Post Office" />
-        <DrawerItem icon="rupee" label="   Fee Payment Status" />
-        <DrawerItem icon="bar-chart" label="Assessment" />
-        <DrawerItem icon="user-check" label="Attendance" />
-        <DrawerItem icon="calendar" label="Timetable" />
-        <DrawerItem icon="envelope" label="Mails" />
-        <DrawerItem icon="book" label="Rules & Regulations" />
+        <DrawerItem icon="file-text" label="Holiday/Event" onPress={() => props.navigation.navigate('Holiday')} />
+        <DrawerItem icon="mail" label="Post Office" onPress={() => props.navigation.navigate('PostOffice')} />
+        <DrawerItem icon="rupee" label="   Fee Payment Status" onPress={() => props.navigation.navigate('Fee')} />
+        <DrawerItem icon="bar-chart" label="Assessment" onPress={() => props.navigation.navigate('Assessment')} />
+        <DrawerItem icon="user-check" label="Attendance" onPress={() => props.navigation.navigate('Attendance')} />
+        <DrawerItem icon="calendar" label="Timetable" onPress={() => props.navigation.navigate('Timetable')} />
+        <DrawerItem icon="envelope" label="Mails" onPress={() => props.navigation.navigate('Mails')} />
+        <DrawerItem icon="book" label="Rules & Regulations" onPress={() => props.navigation.navigate('Rules')} />
       </View>
 
       {/* Highlighted items */}
-      <TouchableOpacity style={[styles.drawerItem, styles.highlightItem]}>
+      <TouchableOpacity style={[styles.drawerItem, styles.highlightItem]} onPress={() => props.navigation.navigate('ChangePassword')}>
         <Text style={styles.highlightText}>***   Change Password</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={[styles.drawerItem, styles.highlightItem]}>
+      <TouchableOpacity style={[styles.drawerItem, styles.highlightItem]} onPress={handleRefresh}>
         <MaterialIcons name="refresh" size={30} color="#000" style={{ marginRight: 5 }} />
         <Text style={styles.highlightText}>Refresh</Text>
       </TouchableOpacity>
@@ -60,14 +94,17 @@ function CustomDrawerContent(props) {
       {/* Footer with Profile */}
       <View style={styles.footer}>
         <Image
-          source={{ uri: 'https://i.ibb.co/bQpHpGc/profile-pic.png' }} // replace with real profile pic
+          //source={{ uri: 'https://i.ibb.co/bQpHpGc/profile-pic.png' }} // replace with real profile pic
+          source={require("./assets/avatar.png")}
           style={styles.profilePic}
         />
         <View style={{ flex: 1 }}>
-          <Text style={styles.profileName}>Jeevan M</Text>
-          <Text style={styles.profileEmail}>v1.4.2</Text>
+          <Text style={styles.profileName}>{user?.full_name || 'User'}</Text>
+          <Text style={styles.profileEmail}>{user?.email || ''}</Text>
         </View>
-        <Feather name="log-out" size={22} color="#000" />
+        <TouchableOpacity onPress={logout}>
+          <Feather name="log-out" size={22} color="#000" />
+        </TouchableOpacity>
       </View>
 
       {/* Powered by */}
@@ -84,7 +121,7 @@ function CustomDrawerContent(props) {
 }
 
 // Helper Drawer Item
-function DrawerItem({ icon, label }) {
+function DrawerItem({ icon, label, onPress }) {
   let IconComponent = Feather;
   if (icon === 'rupee') IconComponent = FontAwesome;
   if (icon === 'envelope') IconComponent = FontAwesome;
@@ -92,7 +129,7 @@ function DrawerItem({ icon, label }) {
   if (icon === 'clipboard') IconComponent = FontAwesome;
 
   return (
-    <TouchableOpacity style={styles.drawerItem}>
+    <TouchableOpacity style={styles.drawerItem} onPress={onPress}>
       <IconComponent name={icon} size={24} color="#000" style={{ marginRight: 10 }} />
       <Text style={styles.drawerText}>{label}</Text>
     </TouchableOpacity>
@@ -184,17 +221,47 @@ function MainStack() {
 }
 
 // -------- Root App --------------
-export default function App() {
+function AppContent() {
+  const { isLoggedIn } = useContext(UserContext);
+
   return (
     <NavigationContainer>
       <StatusBar style="dark" />
-      <Drawer.Navigator
-        screenOptions={{ headerShown: false }}
-        drawerContent={(props) => <CustomDrawerContent {...props} />}
-      >
-        <Drawer.Screen name="MainStack" component={MainStack} />
-      </Drawer.Navigator>
+      {isLoggedIn ? (
+        <Drawer.Navigator
+          screenOptions={{ headerShown: false }}
+          drawerContent={(props) => <CustomDrawerContent {...props} />}
+        >
+          <Drawer.Screen name="MainStack" component={MainStack} />
+          <Drawer.Screen name="Holiday" component={HolidayScreen} />
+          <Drawer.Screen name="PostOffice" component={PostOfficeScreen} />
+          <Drawer.Screen name="Fee" component={FeeScreen} />
+          <Drawer.Screen name="Assessment" component={AssessmentScreen} />
+          <Drawer.Screen name="Attendance" component={AttendanceScreen} />
+          <Drawer.Screen name="Timetable" component={TimetableScreen} />
+          <Drawer.Screen name="Mails" component={MailsScreen} />
+          <Drawer.Screen name="Rules" component={RulesScreen} />
+          <Drawer.Screen name="ChangePassword" component={ChangePasswordScreen} />
+          <Drawer.Screen name="Notifications" component={NotificationsScreen} />
+        </Drawer.Navigator>
+      ) : (
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="Login" component={LoginScreen} />
+        </Stack.Navigator>
+      )}
     </NavigationContainer>
+  );
+}
+
+import { NotificationProvider } from './contexts/NotificationContext';
+
+export default function App() {
+  return (
+    <UserProvider>
+      <NotificationProvider>
+        <AppContent />
+      </NotificationProvider>
+    </UserProvider>
   );
 }
 

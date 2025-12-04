@@ -1,17 +1,27 @@
-import React from "react";
+import React, { useContext } from "react";
+import { useNavigation } from "@react-navigation/native";
 import { View, Text, Image, StyleSheet, Pressable } from "react-native";
 import { Bell, BookOpen, Calendar, Award, Star } from "lucide-react-native";
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { UserContext } from '../contexts/UserContext';
+
+import { NotificationContext } from '../contexts/NotificationContext';
 
 export default function HeaderProfile() {
+  const navigation = useNavigation();
+  const { user } = useContext(UserContext);
+  const { unreadCount } = useContext(NotificationContext);
+
   return (
     <View style={styles.container}>
       {/* Bell icon top-right */}
-      <Pressable style={styles.bell}>
-      <Ionicons name="notifications-outline" color="#000" size={42} />
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>1</Text>
-        </View>
+      <Pressable style={styles.bell} onPress={() => navigation.navigate('Notifications')}>
+        <Ionicons name="notifications-outline" color="#000" size={42} />
+        {unreadCount > 0 && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{unreadCount}</Text>
+          </View>
+        )}
       </Pressable>
 
       {/* Avatar + Details Center */}
@@ -28,10 +38,10 @@ export default function HeaderProfile() {
             style={styles.avatar}
           />
         </View>
-        <View style={{ paddingTop: 30,paddingBottom:30 }}>
-        <Text style={styles.name}>Jeevan M</Text>
-        <Text style={styles.id}>230L170</Text>
-        <Text style={styles.grade}>Grade 1 - B</Text>
+        <View style={{ paddingTop: 30, paddingBottom: 30 }}>
+          <Text style={styles.name}>{user?.full_name || 'Guest User'}</Text>
+          <Text style={styles.id}>{user?.email || 'ID: 230L170'}</Text>
+          <Text style={styles.grade}>{user?.role ? user.role.toUpperCase() : 'Grade 1 - B'}</Text>
         </View>
 
 
@@ -42,7 +52,7 @@ export default function HeaderProfile() {
 
 const styles = StyleSheet.create({
   container: {
-    marginTop:30,
+    marginTop: 30,
     paddingHorizontal: 20,
     paddingTop: 12,
     position: "relative",

@@ -1,5 +1,5 @@
 // screens/FeedScreen.js
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,42 +8,34 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { getFeeds } from '../services/api';
 
 const { width } = Dimensions.get('window');
 
 const FeedScreen = ({ navigation }) => {
-  const [feeds] = useState([
-    {
-      id: '1',
-      image: [
-        require('../assets/buzz1.jpg'),
-        require('../assets/buzz2.jpg'),
-      ],
-      title: 'Our Administrator on Sports as a Way of Life – National Sports Day',
-      description: `In today’s world where convenience often keeps us indoors, it is more important than ever to engage with sports and physical activity. Sports not only build fitness but also shape character, discipline, and resilience. Through active participation, children and young adults learn teamwork, develop leadership qualities, and embrace the values of perseverance and fair play.`,
-    },
-    {
-      id: '2',
-      image: require('../assets/buzz2.jpg'),
-      title: 'Kaira Baliga of 10B - Second Runners-Up, Vijayanagar District Table Tennis',
-      description: `Game on! Whether it’s the court, the pool, or the table — our Sports Stars leap, splash, and smash their way to victory! We are so proud to celebrate the achievements of our students who continue to shine in every arena.`,
-    },
-    {
-        id: '3',
-        image: [
-            require('../assets/buzz1.jpg'),
-            require('../assets/buzz2.jpg'),
-          ],
-        title: 'Kaira Baliga of 10B - Second Runners-Up, Vijayanagar District Table Tennis',
-        description: `Game on! Whether it’s the court, the pool, or the table — our Sports Stars leap, splash, and smash their way to victory! We are so proud to celebrate the achievements of our students who continue to shine in every arena.`,
-      },
-  ]);
-
+  const [feeds, setFeeds] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activeIndexes, setActiveIndexes] = useState({});
   const [expanded, setExpanded] = useState({}); // track expanded descriptions
   const scrollRefs = useRef({});
+
+  useEffect(() => {
+    fetchFeeds();
+  }, []);
+
+  const fetchFeeds = async () => {
+    try {
+      const data = await getFeeds();
+      setFeeds(data);
+    } catch (error) {
+      console.log("Failed to load feeds", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleScroll = (event, feedId) => {
     const index = Math.round(event.nativeEvent.contentOffset.x / width);
@@ -64,44 +56,41 @@ const FeedScreen = ({ navigation }) => {
   const renderItem = ({ item }) => (
     <View style={styles.card}>
       {/* Images */}
-      {Array.isArray(item.image) ? (
+      {item.images && item.images.length > 0 ? (
         <>
           <FlatList
             ref={(ref) => (scrollRefs.current[item.id] = ref)}
-            data={item.image}
+            data={item.images}
             keyExtractor={(_, idx) => `${item.id}-${idx}`}
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             renderItem={({ item: img }) => (
-              <Image source={img} style={styles.feedImage} />
+              <Image source={{ uri: img }} style={styles.feedImage} />
             )}
             onScroll={(e) => handleScroll(e, item.id)}
             scrollEventThrottle={16}
           />
           {/* Dots */}
-          <View style={styles.dots}>
-            {item.image.map((_, idx) => (
-              <TouchableOpacity
-                key={`${item.id}-dot-${idx}`}
-                onPress={() => handleDotPress(item.id, idx)}
-              >
-                <View
-                  style={[
-                    styles.dot,
-                    idx === (activeIndexes[item.id] || 0) && styles.dotActive,
-                  ]}
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
+          {item.images.length > 1 && (
+            <View style={styles.dots}>
+              {item.images.map((_, idx) => (
+                <TouchableOpacity
+                  key={`${item.id}-dot-${idx}`}
+                  onPress={() => handleDotPress(item.id, idx)}
+                >
+                  <View
+                    style={[
+                      styles.dot,
+                      idx === (activeIndexes[item.id] || 0) && styles.dotActive,
+                    ]}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </>
-      ) : (
-        <Image
-          source={typeof item.image === 'string' ? { uri: item.image } : item.image}
-          style={styles.feedImage}
-        />
-      )}
+      ) : null}
 
       {/* Title */}
       <Text style={styles.feedTitle}>{item.title}</Text>
@@ -123,6 +112,14 @@ const FeedScreen = ({ navigation }) => {
     </View>
   );
 
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#2196F3" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -142,9 +139,12 @@ const FeedScreen = ({ navigation }) => {
       {/* Feed List */}
       <FlatList
         data={feeds}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
         contentContainerStyle={{ paddingBottom: 20 }}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>No feeds available.</Text>
+        }
       />
     </View>
   );
@@ -192,5 +192,11 @@ const styles = StyleSheet.create({
   dotActive: {
     backgroundColor: '#3b82f6',
     width: 16,
+  },
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 40,
+    color: '#9ca3af',
+    fontSize: 16,
   },
 });

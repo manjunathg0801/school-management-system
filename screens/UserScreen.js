@@ -1,23 +1,63 @@
-// screens/UserScreen.js
-import React from "react";
-import { View, Text, Image, StyleSheet, ScrollView } from "react-native";
+import React, { useContext, useEffect, useState } from "react";
+import { View, Text, Image, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from "react-native";
 import { User, Users, Home, MapPin, Phone } from "lucide-react-native";
+import { UserContext } from "../contexts/UserContext";
+import { getUserProfile } from "../services/api";
 
 export default function UserScreen() {
+  const { user } = useContext(UserContext);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchProfile = async () => {
+    if (user?.email) {
+      try {
+        const data = await getUserProfile(user.email);
+        setProfile(data);
+      } catch (error) {
+        console.log("Failed to load profile", error);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, [user]);
+
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    fetchProfile();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#2196F3" />
+      </View>
+    );
+  }
+
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={{ paddingBottom: 80 }} // ✅ space for BottomTab
+      contentContainerStyle={{ paddingBottom: 80 }}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
     >
       {/* Header */}
       <View style={styles.header}>
         <Image
-          source={require("../assets/avatar.png")} // replace with actual student image
+          source={profile?.photo_url ? { uri: profile.photo_url } : require("../assets/avatar.png")}
           style={styles.avatar}
         />
-        <Text style={styles.name}>Jeevan M</Text>
-        <Text style={styles.id}>230L170</Text>
+        <Text style={styles.name}>{user?.full_name || 'Student Name'}</Text>
+        <Text style={styles.id}>{profile?.admission_number || 'ID: --'}</Text>
       </View>
 
       {/* Student Info */}
@@ -27,11 +67,11 @@ export default function UserScreen() {
           <Text style={styles.cardTitle}> Student Information</Text>
         </View>
         {[
-          ["Student ID", "230L170"],
-          ["Date of Birth", "03-Feb-2019"],
-          ["Gender", "M"],
-          ["Blood Group", "B +ve"],
-          ["Nationality", "Indian"],
+          ["Student ID", profile?.admission_number || '--'],
+          ["Date of Birth", profile?.date_of_birth || '--'],
+          ["Gender", profile?.gender || '--'],
+          ["Blood Group", profile?.blood_group || '--'],
+          ["Class", `${profile?.class_grade || ''} - ${profile?.section || ''}`],
         ].map(([label, value], idx) => (
           <View style={styles.cardRow} key={idx}>
             <Text style={styles.label}>{label}</Text>
@@ -50,15 +90,15 @@ export default function UserScreen() {
         <Text style={styles.subHeading}>Father</Text>
         <View style={styles.cardRow}>
           <Text style={styles.label}>Name</Text>
-          <Text style={styles.value}>Manjunath G</Text>
+          <Text style={styles.value}>{profile?.parent_profile?.father_name || '--'}</Text>
         </View>
         <View style={styles.cardRow}>
           <Text style={styles.label}>Phone</Text>
-          <Text style={styles.value}>9886890834</Text>
+          <Text style={styles.value}>{profile?.parent_profile?.father_phone || '--'}</Text>
         </View>
         <View style={styles.cardRow}>
-          <Text style={styles.label}>Email</Text>
-          <Text style={styles.value}>manjunathg0801@gmail.com</Text>
+          <Text style={styles.label}>Occupation</Text>
+          <Text style={styles.value}>{profile?.parent_profile?.father_occupation || '--'}</Text>
         </View>
 
         <View style={styles.divider} />
@@ -66,15 +106,15 @@ export default function UserScreen() {
         <Text style={styles.subHeading}>Mother</Text>
         <View style={styles.cardRow}>
           <Text style={styles.label}>Name</Text>
-          <Text style={styles.value}>Banupriya S</Text>
+          <Text style={styles.value}>{profile?.parent_profile?.mother_name || '--'}</Text>
         </View>
         <View style={styles.cardRow}>
           <Text style={styles.label}>Phone</Text>
-          <Text style={styles.value}>9880050686</Text>
+          <Text style={styles.value}>{profile?.parent_profile?.mother_phone || '--'}</Text>
         </View>
         <View style={styles.cardRow}>
-          <Text style={styles.label}>Email</Text>
-          <Text style={styles.value}>banupriyas147@gmail.com</Text>
+          <Text style={styles.label}>Occupation</Text>
+          <Text style={styles.value}>{profile?.parent_profile?.mother_occupation || '--'}</Text>
         </View>
       </View>
 
@@ -86,10 +126,10 @@ export default function UserScreen() {
         </View>
         <Text style={styles.label}>Present Address</Text>
         <Text style={styles.value}>
-          #50 Srilakshmi Venkateshwara NIlaya 8th Cross Vasanthpura Road,
-          Konankunte Cross Kanakpura Main Road, Bangalore, Karnataka-560062
+          {profile?.address ?
+            `${profile.address.street}, ${profile.address.city}, ${profile.address.state} - ${profile.address.zip_code}`
+            : 'No address found'}
         </Text>
-        <Text style={styles.value}>9980388555</Text>
       </View>
 
       {/* Emergency Contacts */}
@@ -98,12 +138,9 @@ export default function UserScreen() {
           <Phone size={20} color="#000" />
           <Text style={styles.cardTitle}> Emergency Contacts</Text>
         </View>
-        <Text style={styles.value}>Manjunath G</Text>
-        <Text style={styles.value}>
-          #50 Srilakshmi Venkateshwara NIlaya 8th Cross Vasanthpura Road,
-          Bangalore 560062
-        </Text>
-        <Text style={styles.value}>9886890834</Text>
+        <Text style={styles.value}>{profile?.emergency_contact?.contact_name || '--'}</Text>
+        <Text style={styles.value}>{profile?.emergency_contact?.relation_type || '--'}</Text>
+        <Text style={styles.value}>{profile?.emergency_contact?.phone_number || '--'}</Text>
       </View>
     </ScrollView>
   );
@@ -114,7 +151,7 @@ const styles = StyleSheet.create({
   header: {
     marginTop: 80,
     width: 410,
-    marginLeft:12,
+    marginLeft: 12,
     height: 180,
     backgroundColor: "#2196F3",
     alignItems: "center",
@@ -125,7 +162,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
 
-    
+
   },
   avatar: {
     marginTop: 5,
@@ -133,7 +170,6 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     borderWidth: 2,
-    alignItems: "center",
     borderColor: "#fff",
     marginBottom: 10,
   },

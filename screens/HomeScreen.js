@@ -2,7 +2,6 @@ import React from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
 import HeaderProfile from '../components/HeaderProfile';
 import BuzzCarousel from '../components/BuzzCarousel';
-import BottomTab from '../components/BottomTab';
 
 export default function HomeScreen() {
   return (
