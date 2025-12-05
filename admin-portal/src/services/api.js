@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Use localhost for development. 
 // Note: If running on a different device, this needs to be the machine's IP.
-const API_URL = 'http://127.0.0.1:8000/api/v1';
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1';
 
 const api = axios.create({
     baseURL: API_URL,
