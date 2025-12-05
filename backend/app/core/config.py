@@ -4,7 +4,12 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "School Management API"
-    BACKEND_CORS_ORIGINS: list = ["*"]
+    BACKEND_CORS_ORIGINS: list = [
+        "http://localhost:5173",
+        "http://localhost:8081",
+        "http://localhost:3000",
+        "https://school-management-system-chi-drab.vercel.app"
+    ]
 
     POSTGRES_USER: str = os.getenv("POSTGRES_USER", "postgres")
     POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "password")
